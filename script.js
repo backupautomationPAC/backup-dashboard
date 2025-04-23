@@ -1,5 +1,5 @@
 // ------------------------------------------------------
-// Backup Dashboard • script.js (+ Last-Backup date filter)
+// Backup Dashboard • script.js  (sortable columns)
 // ------------------------------------------------------
 (() => {
   const CSV_URL =
@@ -8,6 +8,7 @@
   const COLS = {
     status:   "Status",
     device:   "Computer Name",
+    source:   "Source",               // virtual (always IDrive for now)
     start:    "Backup Start Time",
     backedUp: "Files backed up now",
     failed:   "Files failed to backup",
@@ -17,10 +18,13 @@
   let rawRows = [];
   let viewRows = [];
 
+  // sorting state
+  let sortCol = null;   // e.g. 'device'
+  let sortDir = 'asc';  // 'asc' or 'desc'
+
   // ---------- fetch & parse ---------------------------------------
   function loadData() {
-    const tbody = document.getElementById("backups-data");
-    tbody.innerHTML =
+    document.getElementById("backups-data").innerHTML =
       `<tr><td colspan="7" class="loading-message">Loading backup data...</td></tr>`;
 
     Papa.parse(CSV_URL, {
@@ -48,11 +52,11 @@
       devices.map(d => `<option>${d}</option>`).join("");
   }
 
-  // ---------- filter + render -------------------------------------
+  // ---------- filter ----------------------------------------------
   function applyFilters() {
     const status = document.getElementById("status-filter").value;
     const device = document.getElementById("device-filter").value;
-    const range  = document.getElementById("date-filter").value;   // "all" or N days
+    const range  = document.getElementById("date-filter").value;
     const now    = Date.now();
     const maxAge = range === "all" ? Infinity : Number(range) * 86400000;
 
@@ -68,8 +72,32 @@
       return okStatus && okDevice && okDate;
     });
 
+    // sort
+    if (sortCol) sortViewRows();
+
     renderCards(viewRows);
     renderTable(viewRows);
+  }
+
+  // ---------- sort helper -----------------------------------------
+  function sortViewRows() {
+    const dir = sortDir === 'asc' ? 1 : -1;
+
+    viewRows.sort((a, b) => {
+      let vA, vB;
+      if (sortCol === 'source') { vA = vB = 0; }  // same value
+      else if (sortCol === 'start') {
+        vA = parseDate(a[COLS.start]) || 0;
+        vB = parseDate(b[COLS.start]) || 0;
+      } else {
+        vA = a[COLS[sortCol]];
+        vB = b[COLS[sortCol]];
+      }
+
+      if (typeof vA === 'number' && typeof vB === 'number')
+        return (vA - vB) * dir;
+      return String(vA).localeCompare(String(vB)) * dir;
+    });
   }
 
   // ---------- parse MM/DD/YYYY HH:MM:SS ---------------------------
@@ -87,7 +115,7 @@
     document.getElementById("failed-backups"    ).textContent = rows.filter(r => r.Status === "Failed").length;
   }
 
-  // ---------- table ----------------------------------------------
+  // ---------- table ------------------------------------------------
   function renderTable(rows) {
     const tbody = document.getElementById("backups-data");
     if (!rows.length) {
@@ -105,12 +133,35 @@
         <td>${r[COLS.failed]   || 0}</td>
         <td>${r[COLS.considered] || 0}</td>
       </tr>`).join("");
+
+    // update header arrows
+    document.querySelectorAll("th[data-col]").forEach(th => {
+      th.classList.remove("sort-asc", "sort-desc");
+      if (th.dataset.col === sortCol) th.classList.add(`sort-${sortDir}`);
+    });
   }
 
-  // ---------- bind buttons & initial load -------------------------
+  // ---------- header click binding --------------------------------
+  function bindHeaderClicks() {
+    document.querySelectorAll("th[data-col]").forEach(th => {
+      th.addEventListener("click", () => {
+        const col = th.dataset.col;
+        if (sortCol === col) {
+          sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+          sortCol = col;
+          sortDir = 'asc';
+        }
+        applyFilters();
+      });
+    });
+  }
+
+  // ---------- init ------------------------------------------------
   document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("apply-filters").addEventListener("click", applyFilters);
     document.getElementById("refresh-btn").addEventListener("click", loadData);
+    bindHeaderClicks();
     loadData();
   });
 })();
