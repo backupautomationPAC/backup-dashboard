@@ -8,7 +8,7 @@
   const COLS = {
     status:   "Status",
     device:   "Computer Name",
-    source:   "Source",               // virtual (always IDrive for now)
+    source:   "Source",
     start:    "Backup Start Time",
     backedUp: "Files backed up now",
     failed:   "Files failed to backup",
@@ -17,14 +17,13 @@
 
   let rawRows = [];
   let viewRows = [];
+  let sortCol = null;
+  let sortDir = "asc";
 
-  // sorting state
-  let sortCol = null;   // e.g. 'device'
-  let sortDir = 'asc';  // 'asc' or 'desc'
-
-  // ---------- fetch & parse ---------------------------------------
+  /* ---------- fetch & parse ---------- */
   function loadData() {
-    document.getElementById("backups-data").innerHTML =
+    const tbody = document.getElementById("backups-data");
+    tbody.innerHTML =
       `<tr><td colspan="7" class="loading-message">Loading backup data...</td></tr>`;
 
     Papa.parse(CSV_URL, {
@@ -42,17 +41,17 @@
     });
   }
 
-  // ---------- device dropdown -------------------------------------
+  /* ---------- device dropdown ---------- */
   function buildDeviceOptions(rows) {
     const sel = document.getElementById("device-filter");
     const devices = [...new Set(rows.map(r => r[COLS.device]))]
-                    .filter(Boolean).sort();
+                      .filter(Boolean).sort();
     sel.innerHTML =
       `<option value="All">All Devices</option>` +
       devices.map(d => `<option>${d}</option>`).join("");
   }
 
-  // ---------- filter ----------------------------------------------
+  /* ---------- filter & sort ---------- */
   function applyFilters() {
     const status = document.getElementById("status-filter").value;
     const device = document.getElementById("device-filter").value;
@@ -72,42 +71,36 @@
       return okStatus && okDevice && okDate;
     });
 
-    // sort
     if (sortCol) sortViewRows();
-
     renderCards(viewRows);
     renderTable(viewRows);
   }
 
-  // ---------- sort helper -----------------------------------------
   function sortViewRows() {
-    const dir = sortDir === 'asc' ? 1 : -1;
-
+    const dir = sortDir === "asc" ? 1 : -1;
     viewRows.sort((a, b) => {
       let vA, vB;
-      if (sortCol === 'source') { vA = vB = 0; }  // same value
-      else if (sortCol === 'start') {
+      if (sortCol === "source") { vA = vB = 0; }
+      else if (sortCol === "start") {
         vA = parseDate(a[COLS.start]) || 0;
         vB = parseDate(b[COLS.start]) || 0;
       } else {
         vA = a[COLS[sortCol]];
         vB = b[COLS[sortCol]];
       }
-
-      if (typeof vA === 'number' && typeof vB === 'number')
-        return (vA - vB) * dir;
+      if (typeof vA === "number" && typeof vB === "number") return (vA - vB) * dir;
       return String(vA).localeCompare(String(vB)) * dir;
     });
   }
 
-  // ---------- parse MM/DD/YYYY HH:MM:SS ---------------------------
+  /* ---------- date parser ---------- */
   function parseDate(str) {
     const m = str && str.match(/(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2}):(\d{2})/);
     if (!m) return null;
     return new Date(`${m[3]}-${m[1]}-${m[2]}T${m[4]}:${m[5]}:${m[6]}Z`).getTime();
   }
 
-  // ---------- summary cards --------------------------------------
+  /* ---------- summary cards ---------- */
   function renderCards(rows) {
     document.getElementById("total-backups"     ).textContent = rows.length;
     document.getElementById("successful-backups").textContent = rows.filter(r => r.Status === "Successful").length;
@@ -115,14 +108,13 @@
     document.getElementById("failed-backups"    ).textContent = rows.filter(r => r.Status === "Failed").length;
   }
 
-  // ---------- table ------------------------------------------------
+  /* ---------- table ---------- */
   function renderTable(rows) {
     const tbody = document.getElementById("backups-data");
     if (!rows.length) {
       tbody.innerHTML = `<tr><td colspan="7">No backups match the filters.</td></tr>`;
       return;
     }
-
     tbody.innerHTML = rows.map(r => `
       <tr class="${r.Status.toLowerCase()}">
         <td>${r.Status}</td>
@@ -134,30 +126,25 @@
         <td>${r[COLS.considered] || 0}</td>
       </tr>`).join("");
 
-    // update header arrows
     document.querySelectorAll("th[data-col]").forEach(th => {
       th.classList.remove("sort-asc", "sort-desc");
       if (th.dataset.col === sortCol) th.classList.add(`sort-${sortDir}`);
     });
   }
 
-  // ---------- header click binding --------------------------------
+  /* ---------- header clicks ---------- */
   function bindHeaderClicks() {
     document.querySelectorAll("th[data-col]").forEach(th => {
       th.addEventListener("click", () => {
         const col = th.dataset.col;
-        if (sortCol === col) {
-          sortDir = sortDir === 'asc' ? 'desc' : 'asc';
-        } else {
-          sortCol = col;
-          sortDir = 'asc';
-        }
+        if (sortCol === col) sortDir = sortDir === "asc" ? "desc" : "asc";
+        else { sortCol = col; sortDir = "asc"; }
         applyFilters();
       });
     });
   }
 
-  // ---------- init ------------------------------------------------
+  /* ---------- init ---------- */
   document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("apply-filters").addEventListener("click", applyFilters);
     document.getElementById("refresh-btn").addEventListener("click", loadData);
