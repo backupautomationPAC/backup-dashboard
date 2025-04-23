@@ -1,5 +1,5 @@
 // ------------------------------------------------------
-// Backup Dashboard  •  script.js  (+ date filter, fixed)
+// Backup Dashboard • script.js (+ Last-Backup date filter)
 // ------------------------------------------------------
 (() => {
   const CSV_URL =
@@ -17,7 +17,7 @@
   let rawRows = [];
   let viewRows = [];
 
-  // -------- fetch & parse -----------------------------------------
+  // ---------- fetch & parse ---------------------------------------
   function loadData() {
     const tbody = document.getElementById("backups-data");
     tbody.innerHTML =
@@ -38,24 +38,23 @@
     });
   }
 
-  // -------- device dropdown ---------------------------------------
+  // ---------- device dropdown -------------------------------------
   function buildDeviceOptions(rows) {
     const sel = document.getElementById("device-filter");
     const devices = [...new Set(rows.map(r => r[COLS.device]))]
-      .filter(Boolean).sort();
-
+                    .filter(Boolean).sort();
     sel.innerHTML =
       `<option value="All">All Devices</option>` +
       devices.map(d => `<option>${d}</option>`).join("");
   }
 
-  // -------- filter + render ---------------------------------------
+  // ---------- filter + render -------------------------------------
   function applyFilters() {
     const status = document.getElementById("status-filter").value;
     const device = document.getElementById("device-filter").value;
     const range  = document.getElementById("date-filter").value;   // "all" or N days
     const now    = Date.now();
-    const maxAge = range === "all" ? Infinity : Number(range) * 86400000; // ms
+    const maxAge = range === "all" ? Infinity : Number(range) * 86400000;
 
     viewRows = rawRows.filter(r => {
       const okStatus = status === "All Statuses" || r.Status === status;
@@ -73,23 +72,22 @@
     renderTable(viewRows);
   }
 
-  // -------- FIXED regex (single back-slashes) ----------------------
+  // ---------- parse MM/DD/YYYY HH:MM:SS ---------------------------
   function parseDate(str) {
     const m = str && str.match(/(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2}):(\d{2})/);
     if (!m) return null;
     return new Date(`${m[3]}-${m[1]}-${m[2]}T${m[4]}:${m[5]}:${m[6]}Z`).getTime();
   }
 
-  // -------- summary cards ----------------------------------------
+  // ---------- summary cards --------------------------------------
   function renderCards(rows) {
-    const tot = rows.length;
-    document.getElementById("total-backups").textContent      = tot;
+    document.getElementById("total-backups"     ).textContent = rows.length;
     document.getElementById("successful-backups").textContent = rows.filter(r => r.Status === "Successful").length;
-    document.getElementById("failed-backups").textContent     = rows.filter(r => r.Status === "Failed").length;
-    document.getElementById("warning-backups").textContent    = rows.filter(r => r.Status === "Warning").length;
+    document.getElementById("warning-backups"   ).textContent = rows.filter(r => r.Status === "Warning").length;
+    document.getElementById("failed-backups"    ).textContent = rows.filter(r => r.Status === "Failed").length;
   }
 
-  // -------- table -------------------------------------------------
+  // ---------- table ----------------------------------------------
   function renderTable(rows) {
     const tbody = document.getElementById("backups-data");
     if (!rows.length) {
@@ -102,14 +100,14 @@
         <td>${r.Status}</td>
         <td>${r[COLS.device] || ""}</td>
         <td>IDrive</td>
-        <td>${r[COLS.start] || ""}</td>
+        <td>${r[COLS.start]  || ""}</td>
         <td>${r[COLS.backedUp] || 0}</td>
-        <td>${r[COLS.failed]  || 0}</td>
+        <td>${r[COLS.failed]   || 0}</td>
         <td>${r[COLS.considered] || 0}</td>
       </tr>`).join("");
   }
 
-  // -------- bind & initial load -----------------------------------
+  // ---------- bind buttons & initial load -------------------------
   document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("apply-filters").addEventListener("click", applyFilters);
     document.getElementById("refresh-btn").addEventListener("click", loadData);
