@@ -1,5 +1,5 @@
 // ------------------------------------------------------
-// Backup Dashboard  •  script.js  (Device dropdown)
+// Backup Dashboard  •  script.js   (+ date filter)
 // ------------------------------------------------------
 (() => {
   const CSV_URL =
@@ -8,12 +8,10 @@
   const COLS = {
     status:     "Status",
     device:     "Computer Name",
-    backupSet:  "Backup Set",
-    start:      "Backup Start Time",
-    considered: "Files considered for backup",
-    present:    "Files already present",
+    start:      "Backup Start Time",   // date column
     backedUp:   "Files backed up now",
     failed:     "Files failed to backup",
+    considered: "Files considered for backup"
   };
 
   let rawRows = [];
@@ -30,7 +28,7 @@
       dynamicTyping: true,
       complete: ({ data }) => {
         rawRows = data.filter(r => r[COLS.status]);
-        buildFilterOptions(rawRows);
+        buildDeviceOptions(rawRows);
         applyFilters();
         document.getElementById("update-time").textContent =
           new Date().toLocaleString();
@@ -39,13 +37,12 @@
     });
   }
 
-  // -------- build dropdowns ---------------------------------------
-  function buildFilterOptions(rows) {
-    const deviceSel = document.getElementById("device-filter");
-    const devices   = [...new Set(rows.map(r => r[COLS.device]))]
-                      .filter(Boolean).sort();
-
-    deviceSel.innerHTML =
+  // -------- device dropdown ---------------------------------------
+  function buildDeviceOptions(rows) {
+    const sel = document.getElementById("device-filter");
+    const devices = [...new Set(rows.map(r => r[COLS.device]))]
+      .filter(Boolean).sort();
+    sel.innerHTML =
       `<option value="All">All Devices</option>` +
       devices.map(d => `<option>${d}</option>`).join("");
   }
@@ -54,28 +51,41 @@
   function applyFilters() {
     const status = document.getElementById("status-filter").value;
     const device = document.getElementById("device-filter").value;
+    const dateOpt= document.getElementById("date-filter").value; // "all" or N days
+
+    const now   = Date.now();
+    const maxAgeMs = dateOpt === "all" ? Infinity : Number(dateOpt) * 24 * 60 * 60 * 1000;
 
     viewRows = rawRows.filter(r => {
-      const okStatus = status === "All Statuses" || r[COLS.status] === status;
+      const okStatus = status === "All Statuses" || r["Status"] === status;
       const okDevice = device === "All"         || r[COLS.device] === device;
-      return okStatus && okDevice;
+
+      let okDate = true;
+      if (maxAgeMs !== Infinity) {
+        const ts = parseDate(r[COLS.start]);
+        okDate = ts && (now - ts <= maxAgeMs);
+      }
+      return okStatus && okDevice && okDate;
     });
 
     renderCards(viewRows);
     renderTable(viewRows);
   }
 
-  // -------- summary cards -----------------------------------------
-  function renderCards(rows) {
-    const total   = rows.length;
-    const success = rows.filter(r => r[COLS.status] === "Successful").length;
-    const failed  = rows.filter(r => r[COLS.status] === "Failed").length;
-    const warning = rows.filter(r => r[COLS.status] === "Warning").length;
+  // -------- date parser (MM/DD/YYYY HH:MM:SS) ---------------------
+  function parseDate(str) {
+    const m = str && str.match(/(\\d{2})\\/(\\d{2})\\/(\\d{4}) (\\d{2}):(\\d{2}):(\\d{2})/);
+    if (!m) return null;
+    return new Date(`${m[3]}-${m[1]}-${m[2]}T${m[4]}:${m[5]}:${m[6]}Z`).getTime();
+  }
 
-    document.getElementById("total-backups").textContent      = total;
-    document.getElementById("successful-backups").textContent = success;
-    document.getElementById("failed-backups").textContent     = failed;
-    document.getElementById("warning-backups").textContent    = warning;
+  // -------- summary cards ----------------------------------------
+  function renderCards(rows) {
+    const num = rows.length;
+    document.getElementById("total-backups").textContent      = num;
+    document.getElementById("successful-backups").textContent = rows.filter(r => r.Status === "Successful").length;
+    document.getElementById("failed-backups").textContent     = rows.filter(r => r.Status === "Failed").length;
+    document.getElementById("warning-backups").textContent    = rows.filter(r => r.Status === "Warning").length;
   }
 
   // -------- table -------------------------------------------------
@@ -87,13 +97,13 @@
     }
 
     tbody.innerHTML = rows.map(r => `
-      <tr class="${r[COLS.status].toLowerCase()}">
-        <td>${r[COLS.status]  || ""}</td>
-        <td>${r[COLS.device]  || ""}</td>
+      <tr class="${r.Status.toLowerCase()}">
+        <td>${r.Status || ""}</td>
+        <td>${r[COLS.device] || ""}</td>
         <td>IDrive</td>
-        <td>${r[COLS.start]   || ""}</td>
-        <td>${r[COLS.backedUp]|| 0}</td>
-        <td>${r[COLS.failed]  || 0}</td>
+        <td>${r[COLS.start] || ""}</td>
+        <td>${r[COLS.backedUp] || 0}</td>
+        <td>${r[COLS.failed] || 0}</td>
         <td>${r[COLS.considered] || 0}</td>
       </tr>`).join("");
   }
