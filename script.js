@@ -1,17 +1,14 @@
-// ------------------------------------------------------
-// Backup Dashboard • script.js  (sortable columns)
-// ------------------------------------------------------
+// Backup Dashboard • script.js (sortable columns)
 (() => {
-  const CSV_URL =
-    "https://docs.google.com/spreadsheets/d/e/2PACX-1vR7ld_Xk6exjhviNdm30N1MKaa7huWDGjtdR5BvQbG9D_-TCWPTRMRlcDK4Sd58f08KcKYDRWhbTVuM/pub?output=csv";
+  const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR7ld_Xk6exjhviNdm30N1MKaa7huWDGjtdR5BvQbG9D_-TCWPTRMRlcDK4Sd58f08KcKYDRWhbTVuM/pub?output=csv";
 
   const COLS = {
-    status:   "Status",
-    device:   "Computer Name",
-    source:   "Source",
-    start:    "Backup Start Time",
+    status: "Status",
+    device: "Computer Name",
+    source: "Source",
+    start: "Backup Start Time",
     backedUp: "Files backed up now",
-    failed:   "Files failed to backup",
+    failed: "Files failed to backup",
     considered: "Files considered for backup"
   };
 
@@ -23,47 +20,50 @@
   /* ---------- fetch & parse ---------- */
   function loadData() {
     const tbody = document.getElementById("backups-data");
-    tbody.innerHTML =
-      `<tr><td colspan="7" class="loading-message">Loading backup data...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="loading-message">Loading backup data...</td></tr>`;
 
     Papa.parse(CSV_URL, {
       download: true,
       header: true,
       dynamicTyping: true,
-      complete: ({ data }) => {
+      complete: ({ data, errors }) => {
+        if (errors && errors.length > 0) {
+          tbody.innerHTML = `<tr><td colspan="7" style="color:red">Error parsing data: ${errors[0].message}</td></tr>`;
+          return;
+        }
+        
         rawRows = data.filter(r => r[COLS.status]);
         buildDeviceOptions(rawRows);
         applyFilters();
-        document.getElementById("update-time").textContent =
-          new Date().toLocaleString();
+        document.getElementById("update-time").textContent = new Date().toLocaleString();
       },
-      error: err => { console.error(err); alert("Error loading sheet data"); }
+      error: err => {
+        console.error(err);
+        tbody.innerHTML = `<tr><td colspan="7" style="color:red">Error loading sheet data. Check console.</td></tr>`;
+      }
     });
   }
 
   /* ---------- device dropdown ---------- */
   function buildDeviceOptions(rows) {
     const sel = document.getElementById("device-filter");
-    const devices = [...new Set(rows.map(r => r[COLS.device]))]
-                      .filter(Boolean).sort();
-    sel.innerHTML =
-      `<option value="All">All Devices</option>` +
-      devices.map(d => `<option>${d}</option>`).join("");
+    const devices = [...new Set(rows.map(r => r[COLS.device]))].filter(Boolean).sort();
+    sel.innerHTML = `<option value="All">All Devices</option>` + devices.map(d => `<option>${d}</option>`).join("");
   }
 
   /* ---------- filter & sort ---------- */
   function applyFilters() {
     const status = document.getElementById("status-filter").value;
     const device = document.getElementById("device-filter").value;
-    const range  = document.getElementById("date-filter").value;
-    const now    = Date.now();
+    const range = document.getElementById("date-filter").value;
+    const now = Date.now();
     const maxAge = range === "all" ? Infinity : Number(range) * 86400000;
 
     viewRows = rawRows.filter(r => {
       const okStatus = status === "All Statuses" || r.Status === status;
-      const okDevice = device === "All"         || r[COLS.device] === device;
-
+      const okDevice = device === "All" || r[COLS.device] === device;
       let okDate = true;
+      
       if (maxAge !== Infinity) {
         const ts = parseDate(r[COLS.start]);
         okDate = ts && (now - ts <= maxAge);
@@ -102,10 +102,10 @@
 
   /* ---------- summary cards ---------- */
   function renderCards(rows) {
-    document.getElementById("total-backups"     ).textContent = rows.length;
+    document.getElementById("total-backups").textContent = rows.length;
     document.getElementById("successful-backups").textContent = rows.filter(r => r.Status === "Successful").length;
-    document.getElementById("warning-backups"   ).textContent = rows.filter(r => r.Status === "Warning").length;
-    document.getElementById("failed-backups"    ).textContent = rows.filter(r => r.Status === "Failed").length;
+    document.getElementById("warning-backups").textContent = rows.filter(r => r.Status === "Warning").length;
+    document.getElementById("failed-backups").textContent = rows.filter(r => r.Status === "Failed").length;
   }
 
   /* ---------- table ---------- */
@@ -115,14 +115,15 @@
       tbody.innerHTML = `<tr><td colspan="7">No backups match the filters.</td></tr>`;
       return;
     }
+    
     tbody.innerHTML = rows.map(r => `
       <tr class="${r.Status.toLowerCase()}">
         <td>${r.Status}</td>
         <td>${r[COLS.device] || ""}</td>
         <td>IDrive</td>
-        <td>${r[COLS.start]  || ""}</td>
+        <td>${r[COLS.start] || ""}</td>
         <td>${r[COLS.backedUp] || 0}</td>
-        <td>${r[COLS.failed]   || 0}</td>
+        <td>${r[COLS.failed] || 0}</td>
         <td>${r[COLS.considered] || 0}</td>
       </tr>`).join("");
 
@@ -145,10 +146,16 @@
   }
 
   /* ---------- init ---------- */
-  document.addEventListener("DOMContentLoaded", () => {
+  function init() {
     document.getElementById("apply-filters").addEventListener("click", applyFilters);
     document.getElementById("refresh-btn").addEventListener("click", loadData);
     bindHeaderClicks();
     loadData();
-  });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
 })();
