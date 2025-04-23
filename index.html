@@ -5,10 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Backup Monitoring Dashboard</title>
 
+  <!-- styles & icons -->
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
 
+  <!-- CSV parser -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" defer></script>
+
+  <!-- dashboard logic -->
   <script src="script.js" defer></script>
 </head>
 <body>
@@ -26,18 +30,52 @@
   <main>
     <!-- SUMMARY CARDS -->
     <section class="summary-cards">
-      <!-- … (same four cards as before) … -->
+      <div class="card">
+        <div class="card-icon total"><i class="fas fa-database"></i></div>
+        <div class="card-content">
+          <h3>Total Backups</h3>
+          <div class="card-value" id="total-backups">0</div>
+          <div class="card-subtitle">across all platforms</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-icon success"><i class="fas fa-check-circle"></i></div>
+        <div class="card-content">
+          <h3>Successful</h3>
+          <div class="card-value" id="successful-backups">0</div>
+          <div class="card-subtitle">backups completed</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-icon warning"><i class="fas fa-exclamation-triangle"></i></div>
+        <div class="card-content">
+          <h3>Warnings</h3>
+          <div class="card-value" id="warning-backups">0</div>
+          <div class="card-subtitle">require attention</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-icon failed"><i class="fas fa-times-circle"></i></div>
+        <div class="card-content">
+          <h3>Failed</h3>
+          <div class="card-value" id="failed-backups">0</div>
+          <div class="card-subtitle">require immediate action</div>
+        </div>
+      </div>
     </section>
 
     <!-- FILTERS -->
     <section class="filters">
-      <!-- Device -->
       <div class="filter-group">
         <label for="device-filter">Device</label>
-        <select id="device-filter"><option value="All">All Devices</option></select>
+        <select id="device-filter">
+          <option value="All">All Devices</option>
+        </select>
       </div>
 
-      <!-- Source -->
       <div class="filter-group">
         <label for="source-filter">Source</label>
         <select id="source-filter">
@@ -47,7 +85,6 @@
         </select>
       </div>
 
-      <!-- Status -->
       <div class="filter-group">
         <label for="status-filter">Status</label>
         <select id="status-filter">
@@ -58,7 +95,6 @@
         </select>
       </div>
 
-      <!-- Last Backup (NEW) -->
       <div class="filter-group">
         <label for="date-filter">Last&nbsp;Backup</label>
         <select id="date-filter">
@@ -93,7 +129,7 @@
       </table>
     </section>
 
-    <!-- DETAILS PANEL (unchanged) -->
+    <!-- DETAILS PANEL (optional / unchanged) -->
     <section class="details-panel">
       <div class="details-content">
         <div class="details-icon"><i class="fas fa-info-circle"></i></div>
