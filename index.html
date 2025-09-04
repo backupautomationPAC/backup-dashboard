@@ -4,9 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Backup Monitoring Dashboard</title>
+
+  <!-- styles & icons -->
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+
+  <!-- CSV parser -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" defer></script>
+
+  <!-- dashboard logic -->
   <script src="script.js" defer></script>
 </head>
 <body>
@@ -25,43 +31,38 @@
     <!-- SUMMARY CARDS -->
     <section class="summary-cards">
       <div class="card">
-        <div class="card-icon total">
-          <i class="fas fa-database"></i>
-        </div>
+        <div class="card-icon total"><i class="fas fa-database"></i></div>
         <div class="card-content">
-          <h3>TOTAL BACKUPS</h3>
+          <h3>Total Backups</h3>
           <div class="card-value" id="total-backups">0</div>
-          <div class="card-subtitle">All backup jobs</div>
+          <div class="card-subtitle">across all platforms</div>
         </div>
       </div>
+
       <div class="card">
-        <div class="card-icon success">
-          <i class="fas fa-check-circle"></i>
-        </div>
+        <div class="card-icon success"><i class="fas fa-check-circle"></i></div>
         <div class="card-content">
-          <h3>SUCCESSFUL</h3>
+          <h3>Successful</h3>
           <div class="card-value" id="successful-backups">0</div>
-          <div class="card-subtitle">Completed backups</div>
+          <div class="card-subtitle">backups completed</div>
         </div>
       </div>
+
       <div class="card">
-        <div class="card-icon warning">
-          <i class="fas fa-exclamation-triangle"></i>
-        </div>
+        <div class="card-icon warning"><i class="fas fa-exclamation-triangle"></i></div>
         <div class="card-content">
-          <h3>WARNINGS</h3>
+          <h3>Warnings</h3>
           <div class="card-value" id="warning-backups">0</div>
-          <div class="card-subtitle">Partial successes</div>
+          <div class="card-subtitle">require attention</div>
         </div>
       </div>
+
       <div class="card">
-        <div class="card-icon failed">
-          <i class="fas fa-times-circle"></i>
-        </div>
+        <div class="card-icon failed"><i class="fas fa-times-circle"></i></div>
         <div class="card-content">
-          <h3>FAILED</h3>
+          <h3>Failed</h3>
           <div class="card-value" id="failed-backups">0</div>
-          <div class="card-subtitle">Backups needing attention</div>
+          <div class="card-subtitle">require immediate action</div>
         </div>
       </div>
     </section>
@@ -69,32 +70,42 @@
     <!-- FILTERS -->
     <section class="filters">
       <div class="filter-group">
-        <label for="status-filter">Status</label>
-        <select id="status-filter">
-          <option>All Statuses</option>
-          <option>Successful</option>
-          <option>Warning</option>
-          <option>Failed</option>
-        </select>
-      </div>
-      <div class="filter-group">
         <label for="device-filter">Device</label>
         <select id="device-filter">
           <option value="All">All Devices</option>
-          <!-- Populated by JS -->
         </select>
       </div>
+
       <div class="filter-group">
-        <label for="date-filter">Time Range</label>
-        <select id="date-filter">
-          <option value="1">Last day</option>
-          <option value="2">Last 2 days</option>
-          <option value="7">Last 7 days</option>
-          <option value="30">Last 30 days</option>
-          <option value="90">Last 90 days</option>
-          <option value="all">All time</option>
+        <label for="source-filter">Source</label>
+        <select id="source-filter">
+          <option value="All Sources">All Sources</option>
+          <option value="IDrive">IDrive</option>
+          <option value="Datto">Datto</option>
         </select>
       </div>
+
+      <div class="filter-group">
+        <label for="status-filter">Status</label>
+        <select id="status-filter">
+          <option value="All Statuses">All Statuses</option>
+          <option value="Successful">Successful</option>
+          <option value="Warning">Warning</option>
+          <option value="Failed">Failed</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="date-filter">Last&nbsp;Backup</label>
+        <select id="date-filter">
+          <option value="all">All Dates</option>
+          <option value="1">Last 24&nbsp;Hours</option>
+          <option value="2">Last 48&nbsp;Hours</option>
+          <option value="7">Last 7&nbsp;Days</option>
+          <option value="30">Last 30&nbsp;Days</option>
+        </select>
+      </div>
+
       <button id="apply-filters"><i class="fas fa-filter"></i> Apply Filters</button>
     </section>
 
@@ -103,19 +114,28 @@
       <table id="backups-table">
         <thead>
           <tr>
-            <th data-col="status">STATUS <span class="sort"></span></th>
-            <th data-col="device">DEVICE NAME <span class="sort"></span></th>
-            <th data-col="source">SOURCE <span class="sort"></span></th>
-            <th data-col="start">LAST BACKUP <span class="sort"></span></th>
-            <th data-col="backedUp">FILES BACKED UP <span class="sort"></span></th>
-            <th data-col="failed">FILES FAILED <span class="sort"></span></th>
-            <th data-col="considered">TOTAL SIZE <span class="sort"></span></th>
+            <th>STATUS</th>
+            <th>DEVICE NAME</th>
+            <th>SOURCE</th>
+            <th>LAST BACKUP</th>
+            <th>FILES BACKED UP</th>
+            <th>FILES FAILED</th>
+            <th>TOTAL SIZE</th>
           </tr>
         </thead>
         <tbody id="backups-data">
           <tr><td colspan="7" class="loading-message">Loading backup data...</td></tr>
         </tbody>
       </table>
+    </section>
+
+    <!-- DETAILS PANEL (optional / unchanged) -->
+    <section class="details-panel">
+      <div class="details-content">
+        <div class="details-icon"><i class="fas fa-info-circle"></i></div>
+        <h3>No backup selected</h3>
+        <p>Select a backup from the list to view detailed information</p>
+      </div>
     </section>
   </main>
 </body>
